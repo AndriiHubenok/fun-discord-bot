@@ -21,6 +21,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("say", "Makes the bot say what you tell it to")
                         .addOption(OptionType.STRING, "content", "What the bot should say", true),
                 Commands.slash("currency", "Get the current exchange rate for USD"),
+                Commands.slash("cat", "Get a beautiful image of a cat"),
                 Commands.slash("leave", "Makes the bot leave the server")
         ).queue();
     }
@@ -37,6 +38,11 @@ public class SlashCommandListener extends ListenerAdapter {
                 String resultUsd = slashCommand.getCurrency("USD");
                 String resultEur = slashCommand.getCurrency("EUR");
                 event.getHook().sendMessage("бігом в абмєннік\n" + resultUsd + "\n" + resultEur).queue();
+            }
+            case "cat" -> {
+                event.deferReply().queue();
+                String catImageUrl = slashCommand.getCatImage();
+                event.getHook().sendMessage(catImageUrl).queue();
             }
             case "leave" -> {
                 event.reply("I'm leaving the server now!")
