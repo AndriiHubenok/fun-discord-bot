@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import io.github.cdimascio.dotenv.Dotenv;
 import org.example.api.ParameterStringBuilder;
 
 import java.io.BufferedReader;
@@ -23,7 +24,9 @@ public class SlashCommand {
 
     public String getCurrency(String currency){
         try {
-            String urlWithParams = BANK_URL + "?json=true&valcode=" + currency;
+            LocalDate date = LocalDate.now();
+            String urlWithParams = BANK_URL + "?json=true&valcode=" + currency
+                    + "&date=" + date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
             URI uri = new URI(urlWithParams);
             URL url = uri.toURL();
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
@@ -71,6 +74,46 @@ public class SlashCommand {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "biba";
+        return "Error";
+    }
+
+    public String getCatImage() {
+        Dotenv dotenv = Dotenv.load();
+        try {
+            URL url = new URL("https://api.thecatapi.com/v1/images/search");
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("Accept", "application/json");
+            //con.setRequestProperty("x-api-key", dotenv.get("CAT_API_KEY"));
+
+            int status = con.getResponseCode();
+
+            if (status == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                con.disconnect();
+
+                String jsonResponse = content.toString();
+                JsonArray jsonArray = JsonParser.parseString(jsonResponse).getAsJsonArray();
+
+                if (!jsonArray.isEmpty()) {
+                    JsonObject catObj = jsonArray.get(0).getAsJsonObject();
+                    return catObj.get("url").getAsString();
+                } else {
+                    return "Error: The cat API returned an empty list.";
+                }
+            } else {
+                System.err.println("Failed to fetch. HTTP Status: " + status);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Error fetching cat image.";
     }
 }
