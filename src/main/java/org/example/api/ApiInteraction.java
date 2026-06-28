@@ -16,6 +16,7 @@ import java.time.format.DateTimeFormatter;
 public class ApiInteraction {
     private static final String BANK_URL = "https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange";
     private static final String CAT_URL = "https://api.thecatapi.com/v1/images/search";
+    private static final String WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather";
 
     public String getCurrency(String currency){
         try {
@@ -69,7 +70,7 @@ public class ApiInteraction {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "Error";
+        return "Error getting currency.";
     }
 
     public String getCatImage(String breed) {
@@ -115,5 +116,87 @@ public class ApiInteraction {
             e.printStackTrace();
         }
         return "Error fetching cat image.";
+    }
+
+    public String getWeatherInfo(String city) {
+        Dotenv dotenv = Dotenv.load();
+        try {
+            String apiKey = dotenv.get("OPEN_WEATHER_API_KEY");
+            String urlWithParams = WEATHER_URL + "?q=" + city + "&appid=" + apiKey + "&units=metric";
+            URL url = new URL(urlWithParams);
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+
+            con.setRequestMethod("GET");
+            con.setRequestProperty("Accept", "application/json");
+
+            int status = con.getResponseCode();
+
+            if (status == 200) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                in.close();
+                con.disconnect();
+
+                String jsonResponse = content.toString();
+                JsonObject jsonObject = JsonParser.parseString(jsonResponse).getAsJsonObject();
+
+                double temperature = jsonObject.getAsJsonObject("main").get("temp").getAsDouble();
+                double feelsLike = jsonObject.getAsJsonObject("main").get("feels_like").getAsDouble();
+                int humidity = jsonObject.getAsJsonObject("main").get("humidity").getAsInt();
+                int weatherId = jsonObject.getAsJsonArray("weather")
+                        .get(0).getAsJsonObject().get("id").getAsInt();
+                int code = Integer.parseInt(Integer.toString(weatherId).substring(0, 1));
+                String weatherDescription = jsonObject.getAsJsonArray("weather")
+                        .get(0).getAsJsonObject().get("description").getAsString();
+
+
+                switch (code) {
+                    case 2:
+                        weatherDescription = "граза :thunder_cloud_rain:";
+                        break;
+                    case 3:
+                        weatherDescription = "марасня :white_sun_rain_cloud:";
+                        break;
+                    case 5:
+                        if (weatherId == 500){
+                            weatherDescription = "марасня :white_sun_rain_cloud:";
+                        } else {
+                            weatherDescription = "дощік дощік ти вже зліва, плачє груша, плачє сліва :cloud_rain:";
+                        }
+                        break;
+                    case 6:
+                        weatherDescription = "ооо зе везер аутсайд из фрайтфул :cloud_snow:";
+                        break;
+                    case 7:
+                        weatherDescription = "як в зайлент хілі :fog:";
+                        break;
+                    case 8:
+                        if (weatherId == 800) {
+                            weatherDescription = "солнечній урод свєтіт :sun_with_face:";
+                        } else if (weatherId == 801) {
+                            weatherDescription = "трохі хмар :white_sun_small_cloud:";
+                        } else if (weatherId == 802) {
+                            weatherDescription = "розсєяні хмари :partly_sunny:";
+                        } else if (weatherId == 803) {
+                            weatherDescription = "разбиті хмари :white_sun_cloud:";
+                        }  else if (weatherId == 804) {
+                            weatherDescription = "тупа скайрім :cloud:";
+                        }
+
+                }
+                return String.format("тємпєратурка - %.1f°C\nащущаєтся как - %.1f°C\nжідєнькость - %d%%\nопіс: %s",
+                        temperature, feelsLike, humidity, weatherDescription);
+            } else {
+                System.err.println("Failed to fetch. HTTP Status: " + status);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Шо за мухасранск такой - " + city;
     }
 }

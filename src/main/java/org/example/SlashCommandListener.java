@@ -26,6 +26,8 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("currency", "Get the current exchange rate for USD"),
                 Commands.slash("cat", "Get a beautiful image of a cat"),
                 Commands.slash("best_cat", "Get an image of best breed of cats"),
+                Commands.slash("weather", "Get weather information for a specific city")
+                        .addOption(OptionType.STRING, "city", "City name", true),
                 Commands.slash("leave", "Makes the bot leave the server")
         ).queue();
     }
@@ -60,6 +62,16 @@ public class SlashCommandListener extends ListenerAdapter {
                     return;
                 }
 
+                event.getHook().sendMessageEmbeds(embed.build()).queue();
+            }
+            case "weather" -> {
+                event.deferReply().queue();
+                String city = event.getOption("city", OptionMapping::getAsString);
+                EmbedBuilder embed = slashCommand.getWeather(city);
+                if (embed == null) {
+                    event.getHook().sendMessage("єта шо за мухасранск - " + city).queue();
+                    return;
+                }
                 event.getHook().sendMessageEmbeds(embed.build()).queue();
             }
             case "leave" -> {
