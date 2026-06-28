@@ -6,10 +6,10 @@ import org.example.api.ApiInteraction;
 import java.awt.*;
 
 public class SlashCommand {
-    private ApiInteraction apiInteraction;
+    private final ApiInteraction apiInteraction;
 
-    public SlashCommand() {
-        apiInteraction = new ApiInteraction();
+    public SlashCommand(ApiInteraction apiInteraction) {
+        this.apiInteraction = apiInteraction;
     }
 
 

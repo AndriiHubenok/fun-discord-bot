@@ -3,6 +3,7 @@ package org.example;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import org.example.api.ApiInteraction;
 
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -21,8 +22,10 @@ public class Main {
             System.exit(1);
         }
 
+        ApiInteraction apiInteraction = new ApiInteraction();
+        SlashCommand slashCommand = new SlashCommand(apiInteraction);
         JDA jda = JDABuilder.createLight(botToken, Collections.emptyList())
-                .addEventListeners(new SlashCommandListener())
+                .addEventListeners(new SlashCommandListener(slashCommand))
                 .build();
     }
 }

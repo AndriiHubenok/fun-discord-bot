@@ -11,10 +11,10 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import java.awt.*;
 
 public class SlashCommandListener extends ListenerAdapter {
-    private SlashCommand slashCommand;
+    private final SlashCommand slashCommand;
 
-    public SlashCommandListener() {
-        slashCommand = new SlashCommand();
+    public SlashCommandListener(SlashCommand slashCommand) {
+        this.slashCommand = slashCommand;
     }
 
 
