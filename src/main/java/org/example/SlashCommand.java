@@ -43,4 +43,17 @@ public class SlashCommand {
         embed.setImage(catImageUrl);
         return embed;
     }
+
+    public EmbedBuilder getWeather(String city) {
+        String weatherInfo = apiInteraction.getWeatherInfo(city);
+        if (weatherInfo == null) {
+            return null;
+        }
+
+        EmbedBuilder embed = new EmbedBuilder();
+        embed.setTitle("пагодка в " + city);
+        embed.setColor(Color.CYAN);
+        embed.setDescription(weatherInfo);
+        return embed;
+    }
 }

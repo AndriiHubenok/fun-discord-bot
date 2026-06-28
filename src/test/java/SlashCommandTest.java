@@ -76,4 +76,26 @@ class SlashCommandTest {
 
         assertNull(builder, "Method must return null");
     }
+
+    @Test
+    void getWeatherInfo_ReturnsCorrectEmbed() {
+        String city = "Kyiv";
+        String fakeWeatherInfo = "Temperature: 20°C\nHumidity: 60%\nCondition: Clear Sky";
+        when(apiInteractionMock.getWeatherInfo(city)).thenReturn(fakeWeatherInfo);
+
+        EmbedBuilder builder = slashCommand.getWeather(city);
+        MessageEmbed embed = builder.build();
+
+        assertNotNull(embed);
+        assertEquals("пагодка в " + city, embed.getTitle());
+        assertEquals(Color.CYAN, embed.getColor());
+        assertEquals(fakeWeatherInfo, embed.getDescription());
+    }
+
+    @Test
+    void getWeatherInfo_DefaultBreed_ReturnsNull() {
+        when(apiInteractionMock.getWeatherInfo("Kyiv")).thenReturn(null);
+        EmbedBuilder builder = slashCommand.getWeather("Kyiv");
+        assertNull(builder, "Method must return null");
+    }
 }
