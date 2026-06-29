@@ -28,6 +28,10 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("best_cat", "Get an image of best breed of cats"),
                 Commands.slash("weather", "Get weather information for a specific city")
                         .addOption(OptionType.STRING, "city", "City name", true),
+                Commands.slash("forecast", "Get forecast information for a specific city")
+                        .addOption(OptionType.STRING, "city", "City name", true),
+                Commands.slash("forecast_detailed", "Get detailed forecast information for a specific city")
+                        .addOption(OptionType.STRING, "city", "City name", true),
                 Commands.slash("leave", "Makes the bot leave the server")
         ).queue();
     }
@@ -68,6 +72,26 @@ public class SlashCommandListener extends ListenerAdapter {
                 event.deferReply().queue();
                 String city = event.getOption("city", OptionMapping::getAsString);
                 EmbedBuilder embed = slashCommand.getWeather(city);
+                if (embed == null) {
+                    event.getHook().sendMessage("єта шо за мухасранск - " + city).queue();
+                    return;
+                }
+                event.getHook().sendMessageEmbeds(embed.build()).queue();
+            }
+            case "forecast" -> {
+                event.deferReply().queue();
+                String city = event.getOption("city", OptionMapping::getAsString);
+                EmbedBuilder embed = slashCommand.getForecast(city, false);
+                if (embed == null) {
+                    event.getHook().sendMessage("єта шо за мухасранск - " + city).queue();
+                    return;
+                }
+                event.getHook().sendMessageEmbeds(embed.build()).queue();
+            }
+            case "forecast_detailed" -> {
+                event.deferReply().queue();
+                String city = event.getOption("city", OptionMapping::getAsString);
+                EmbedBuilder embed = slashCommand.getForecast(city, true);
                 if (embed == null) {
                     event.getHook().sendMessage("єта шо за мухасранск - " + city).queue();
                     return;

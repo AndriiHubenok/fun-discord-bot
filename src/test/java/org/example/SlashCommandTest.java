@@ -1,6 +1,7 @@
+package org.example;
+
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import org.example.SlashCommand;
 import org.example.api.ApiInteraction;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -78,7 +79,7 @@ class SlashCommandTest {
     }
 
     @Test
-    void getWeatherInfo_ReturnsCorrectEmbed() {
+    void getWeather_ReturnsCorrectEmbed() {
         String city = "Kyiv";
         String fakeWeatherInfo = "Temperature: 20°C\nHumidity: 60%\nCondition: Clear Sky";
         when(apiInteractionMock.getWeatherInfo(city)).thenReturn(fakeWeatherInfo);
@@ -93,7 +94,7 @@ class SlashCommandTest {
     }
 
     @Test
-    void getWeatherInfo_DefaultBreed_ReturnsNull() {
+    void getWeather_DefaultBreed_ReturnsNull() {
         when(apiInteractionMock.getWeatherInfo("Kyiv")).thenReturn(null);
         EmbedBuilder builder = slashCommand.getWeather("Kyiv");
         assertNull(builder, "Method must return null");

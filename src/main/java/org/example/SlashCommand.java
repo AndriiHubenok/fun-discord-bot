@@ -1,9 +1,11 @@
 package org.example;
 
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.MessageEmbed;
 import org.example.api.ApiInteraction;
 
 import java.awt.*;
+import java.util.List;
 
 public class SlashCommand {
     private final ApiInteraction apiInteraction;
@@ -54,6 +56,24 @@ public class SlashCommand {
         embed.setTitle("пагодка в " + city);
         embed.setColor(Color.CYAN);
         embed.setDescription(weatherInfo);
+        return embed;
+    }
+
+    public EmbedBuilder getForecast(String city, boolean detailed) {
+        List<MessageEmbed.Field> fields = apiInteraction.getForecastFields(city, detailed);
+
+        if (fields == null || fields.isEmpty()) {
+            return null;
+        }
+
+        EmbedBuilder embed = new EmbedBuilder();
+        embed.setTitle("прагноз в " + city);
+        embed.setColor(Color.BLUE);
+
+        for (MessageEmbed.Field field : fields) {
+            embed.addField(field);
+        }
+
         return embed;
     }
 }
