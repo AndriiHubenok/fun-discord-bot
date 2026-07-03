@@ -4,7 +4,6 @@ import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
-import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
@@ -13,7 +12,6 @@ import dev.lavalink.youtube.clients.skeleton.Client;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -23,22 +21,22 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.example.audio.ServerMusicManager;
+import org.example.audio.spotify.SpotifyService;
 
-import java.awt.*;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SlashCommandListener extends ListenerAdapter {
     private final SlashCommand slashCommand;
-    // Менеджер, который отвечает за загрузку треков
     private final AudioPlayerManager playerManager;
+    private final SpotifyService spotifyService;
     private final Map<Long, ServerMusicManager> musicManagers;
 
-    public SlashCommandListener(SlashCommand slashCommand) {
+    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService) {
         this.slashCommand = slashCommand;
         this.musicManagers = new ConcurrentHashMap<>();
         this.playerManager = new DefaultAudioPlayerManager();
+        this.spotifyService = spotifyService;
 
         dev.lavalink.youtube.YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager(
                 true,
@@ -161,6 +159,15 @@ public class SlashCommandListener extends ListenerAdapter {
 
                 ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
 
+                if (spotifyService.isSpotifyTrackUrl(url)) {
+                    try {
+                        url = spotifyService.convertTrackUrlToYoutubeSearch(url);
+                    } catch (Exception e) {
+                        event.getHook().sendMessage("❌ не вдалося прочитати спатіфай трєк: " + e.getMessage()).queue();
+                        return;
+                    }
+                }
+
                 playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
@@ -170,7 +177,6 @@ public class SlashCommandListener extends ListenerAdapter {
 
                     @Override
                     public void playlistLoaded(AudioPlaylist playlist) {
-                        // Для простоты берем первый трек из плейлиста/поиска
                         AudioTrack firstTrack = playlist.getSelectedTrack();
                         if (firstTrack == null) {
                             firstTrack = playlist.getTracks().get(0);
