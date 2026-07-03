@@ -10,6 +10,8 @@ import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.example.api.ApiInteraction;
+import org.example.audio.spotify.SpotifyService;
+import org.example.audio.spotify.SpotifyTrack;
 
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -32,10 +34,11 @@ public class Main {
 
         ApiInteraction apiInteraction = new ApiInteraction();
         SlashCommand slashCommand = new SlashCommand(apiInteraction);
+        SpotifyService spotifyService = new SpotifyService();
         JDA jda = JDABuilder.createLight(botToken, Collections.emptyList())
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
                 .enableCache(CacheFlag.VOICE_STATE)
-                .addEventListeners(new SlashCommandListener(slashCommand))
+                .addEventListeners(new SlashCommandListener(slashCommand, spotifyService))
                 .setAudioModuleConfig(new AudioModuleConfig().withDaveSessionFactory(daveSessionFactory))
                 .build();
     }
