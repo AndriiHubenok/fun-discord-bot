@@ -23,9 +23,10 @@ Before you begin, ensure you have the following installed and configured:
 
 ### Installation
 1. **Clone the repository:**
-   ```
-   git clone [https://github.com/andriihubenok/fun-discord-bot.git](https://github.com/andriihubenok/fun-discord-bot.git)
-   cd fun-discord-bot
+```
+git clone [https://github.com/andriihubenok/fun-discord-bot.git](https://github.com/andriihubenok/fun-discord-bot.git)
+cd fun-discord-bot
+```
 
 
 2. **Configure your environment variables:**
