@@ -4,13 +4,13 @@
 "Real Fat Shady" is a versatile, multi-purpose bot built in Java. It serves as an all-in-one companion for both **Discord servers** and **Telegram chats**, providing real-time currency exchange rates alongside a robust audio system capable of streaming tracks directly from Spotify. By leveraging Discord's Slash Commands and the Telegram Bot API, it offers a seamless and modern user experience across two platforms.
 
 ## Motivation
-It is hard to find a discord bot that can play music from YouTube without a problems or "Premium" subscription. Also, i wanted to implement features that i had never seen in other bots but which was important enough to me and my friends (weather forecast, currency, etc.). This project was built to consolidate those features into a single, highly responsive application. It also serves as a practical implementation of concurrent asynchronous task handling, third-party API integration (Spotify, currency exchange, cats pictures, Telegram, etc.).
+It is hard to find a discord bot that can play music from YouTube without a problems or "Premium" subscription. Also, I wanted to implement features that i had never seen in other bots but which was important enough to me and my friends (Playing music from Telegram, weather forecast, currency, etc.). This project was built to consolidate those features into a single, highly responsive application. It also serves as a practical implementation of concurrent asynchronous task handling, third-party API integration (Spotify, currency exchange, cats pictures, Telegram, etc.).
 
 ## Features
 * **Real-Time Currency Exchange:** Fetches and parses live exchange rates using external APIs, delivering accurate financial data on demand.
 * **Spotify Audio Integration:** Seamlessly searches and queues tracks directly from Spotify, handled by a robust custom music manager.
 * **Slash Command Architecture:** Fully utilizes Discord's Slash Command API for intuitive and auto-completing user commands.
-* **Telegram Bot Integration:** A companion Telegram bot that mirrors key features (currency, weather, cat pictures) directly inside Telegram chats, powered by the Telegram Bot API.
+* **Telegram Bot Integration:** A companion Telegram bot that can download audio files and playing directly inside Discord bot, powered by the Telegram Bot API.
 * **Continuous Integration:** Automated build and testing pipelines configured via GitHub Actions.
 
 ## Quick Start
@@ -60,15 +60,11 @@ Once the bot is invited to your server and running, you can interact with it usi
 * **`/stop`** - Halts audio playback and clears the queue.
 * **`/cat`** - Get a picture of a cat.
 * **`/weather [city]`** - Get a current weather for a specific city.
-* **`/weather_detailed [city]`** - Get a weather forecast for a specific city for 5 days.
+* **`/forecast_detailed [city]`** - Get a weather forecast for a specific city for 5 days.
+* **`/broadcast_tg`** - Starting to listening for a Telegram uploading music.
 
 ### Telegram
-Once the Telegram bot is running, you can interact with it directly in any Telegram chat.
-
-* **`/currency`** - Retrieves the latest exchange rate of USD and EUR to UAH.
-* **`/cat`** - Get a picture of a cat.
-* **`/weather [city]`** - Get a current weather for a specific city.
-* **`/weather_detailed [city]`** - Get a weather forecast for a specific city for 5 days.
+Once the Telegram bot is running, you can interact with it directly in any Telegram chat. Just upload an audiofile and use `/broadcast_tg` command in Discord.
 
 ## Contributing
 
