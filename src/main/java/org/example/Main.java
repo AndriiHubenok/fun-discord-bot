@@ -11,7 +11,12 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.example.api.ApiInteraction;
 import org.example.audio.spotify.SpotifyService;
-import org.example.audio.spotify.SpotifyTrack;
+import org.example.discord.SlashCommand;
+import org.example.discord.SlashCommandListener;
+import org.example.telegram.TelegramBot;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -22,7 +27,7 @@ public class Main {
 
     public static void main(String[] args) {
         Dotenv dotenv = Dotenv.load();
-        String botToken = dotenv.get("TOKEN");
+        String botToken = dotenv.get("DISCORD_BOT_TOKEN");
 
         if (botToken == null || botToken.isEmpty()) {
             System.err.println("Error: Bot token is not set in the environment variables. Please set the TOKEN variable.");

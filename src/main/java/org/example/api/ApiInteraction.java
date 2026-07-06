@@ -250,7 +250,7 @@ public class ApiInteraction {
                 break;
             case 8:
                 if (weatherId == 800) {
-                    weatherDescription = "солнечній урод свєтіт :sun_with_face:";
+                    weatherDescription = "чіста :sun_with_face:";
                 } else if (weatherId == 801) {
                     weatherDescription = "трохі хмар :white_sun_small_cloud:";
                 } else if (weatherId == 802) {

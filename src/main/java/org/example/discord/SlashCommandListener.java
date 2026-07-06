@@ -1,4 +1,4 @@
-package org.example;
+package org.example.discord;
 
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
@@ -9,6 +9,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import dev.lavalink.youtube.clients.*;
 import dev.lavalink.youtube.clients.skeleton.Client;
+import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
@@ -22,6 +23,10 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
+import org.example.telegram.TelegramBot;
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +59,8 @@ public class SlashCommandListener extends ListenerAdapter {
                 this.playerManager,
                 com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager.class
         );
+
+        AudioSourceManagers.registerLocalSource(this.playerManager);
     }
 
 
@@ -75,6 +82,7 @@ public class SlashCommandListener extends ListenerAdapter {
                         .addOption(OptionType.STRING, "url", "YouTube URL of the song", true),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
+                Commands.slash("broadcast_tg", "Broadcast the song from Telegram Bot"),
                 Commands.slash("leave", "Makes the bot leave the server")
         ).queue();
     }
@@ -207,6 +215,36 @@ public class SlashCommandListener extends ListenerAdapter {
                 boolean paused = !mgr.player.isPaused();
                 mgr.player.setPaused(paused);
                 event.reply(paused ? "⏸️ бауза" : "▶️ паєхалі").queue();
+            }
+            case "broadcast_tg" -> {
+                event.deferReply().queue();
+                Dotenv dotenv = Dotenv.load();
+
+                GuildVoiceState voiceState = event.getMember().getVoiceState();
+
+                if (voiceState == null || !voiceState.inAudioChannel()) {
+                    event.getHook().sendMessage("чого нє в каналє?").queue();
+                    return;
+                }
+
+                AudioChannel userVoiceChannel = voiceState.getChannel();
+
+                AudioManager audioManager = event.getGuild().getAudioManager();
+                audioManager.openAudioConnection(userVoiceChannel);
+
+                ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+                try {
+                    TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+
+                    botsApi.registerBot(new TelegramBot(
+                            dotenv.get("TELEGRAM_BOT_TOKEN"),
+                            playerManager,
+                            musicManager
+                    ));
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                event.getHook().sendMessage("ждьом сігнала от братіка с тг").queue();
             }
             case "leave" -> {
                 event.reply("гудбай")
