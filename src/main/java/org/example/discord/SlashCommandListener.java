@@ -36,12 +36,14 @@ public class SlashCommandListener extends ListenerAdapter {
     private final AudioPlayerManager playerManager;
     private final SpotifyService spotifyService;
     private final Map<Long, ServerMusicManager> musicManagers;
+    private final Map<String, ServerMusicManager> pendingPins;
 
-    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService) {
+    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService, Map<String, ServerMusicManager> pendingPins) {
         this.slashCommand = slashCommand;
         this.musicManagers = new ConcurrentHashMap<>();
         this.playerManager = new DefaultAudioPlayerManager();
         this.spotifyService = spotifyService;
+        this.pendingPins = pendingPins;
 
         dev.lavalink.youtube.YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager(
                 true,
@@ -228,23 +230,14 @@ public class SlashCommandListener extends ListenerAdapter {
                 }
 
                 AudioChannel userVoiceChannel = voiceState.getChannel();
-
                 AudioManager audioManager = event.getGuild().getAudioManager();
                 audioManager.openAudioConnection(userVoiceChannel);
 
                 ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
-                try {
-                    TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+                String pin = String.format("%04d", (int)(Math.random() * 10000));
+                pendingPins.put(pin, musicManager);
 
-                    botsApi.registerBot(new TelegramBot(
-                            dotenv.get("TELEGRAM_BOT_TOKEN"),
-                            playerManager,
-                            musicManager
-                    ));
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-                event.getHook().sendMessage("ждьом сігнала от братіка с тг").queue();
+                event.getHook().sendMessage("ждьом тваєго сігнала от с тг - " + dotenv.get("TELEGRAM_BOT_NAME") + "\nввєді в тг: /pin " + pin).queue();
             }
             case "leave" -> {
                 event.reply("гудбай")

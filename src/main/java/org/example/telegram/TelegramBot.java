@@ -14,61 +14,53 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
+import java.util.Map;
 
 public class TelegramBot extends TelegramLongPollingBot {
     private final AudioPlayerManager playerManager;
-    private final ServerMusicManager musicManager;
+    private final Map<String, ServerMusicManager> pendingPins;
+    private final Map<Long, ServerMusicManager> activeTgSessions;
 
-    public TelegramBot(String botToken, AudioPlayerManager playerManager, ServerMusicManager musicManager) {
+    public TelegramBot(String botToken, AudioPlayerManager playerManager,
+                       Map<String, ServerMusicManager> pendingPins,
+                       Map<Long, ServerMusicManager> activeTgSessions) {
         super(botToken);
         this.playerManager = playerManager;
-        this.musicManager = musicManager;
+        this.pendingPins = pendingPins;
+        this.activeTgSessions = activeTgSessions;
     }
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasAudio()) {
-            Audio audio = update.getMessage().getAudio();
-            String fileId = audio.getFileId();
+        Long chatId = update.getMessage().getChatId();
+        if (!update.hasMessage()) return;
 
-            try {
-                GetFile getFileMethod = new GetFile();
-                getFileMethod.setFileId(fileId);
-                org.telegram.telegrambots.meta.api.objects.File file = execute(getFileMethod);
+        if (update.getMessage().hasText()) {
+        String text = update.getMessage().getText();
 
-                String safeFileName = "tg_audio_" + System.currentTimeMillis() + ".mp3";
-                File localFile = downloadFile(file, new File("temp_audio/" + safeFileName));
-
-                playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
-                    @Override
-                    public void trackLoaded(AudioTrack track) {
-                        musicManager.player.playTrack(track);
-                        sendTelegramReply(update.getMessage().getChatId().toString(), "граю аудіо - " + track.getInfo().title);
-                    }
-
-                    @Override
-                    public void playlistLoaded(AudioPlaylist audioPlaylist) {
-
-                    }
-
-                    @Override
-                    public void noMatches() {
-
-                    }
-
-                    @Override
-                    public void loadFailed(FriendlyException e) {
-
-                    }
-                });
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
+            if (text.startsWith("/pin")) {
+                String query = text.substring(5).trim();
+                if (!query.isEmpty()) pinCommand(chatId, query);
             }
+
+        } else if (update.getMessage().hasAudio()) {
+            String fileId = update.getMessage().getAudio().getFileId();
+            audioCommand(chatId, fileId);
+        } else if (update.getMessage().hasVideo()) {
+            String fileId = update.getMessage().getVideo().getFileId();
+            audioCommand(chatId, fileId);
+        } else if (update.getMessage().hasVoice()) {
+            String fileId = update.getMessage().getVoice().getFileId();
+            audioCommand(chatId, fileId);
         }
     }
 
-    private void sendTelegramReply(String chatId, String text) {
+    @Override
+    public String getBotUsername() {
+        return "Real Fat Shady";
+    }
+
+    private void sendTelegramReply(Long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(text);
@@ -79,8 +71,70 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    @Override
-    public String getBotUsername() {
-        return "Real Fat Shady";
+    private void pinCommand(Long chatId, String pin) {
+        ServerMusicManager musicManager = pendingPins.get(pin);
+        if (musicManager != null) {
+            activeTgSessions.put(chatId, musicManager);
+            pendingPins.remove(pin);
+            sendTelegramReply(chatId, "работаєм");
+        } else {
+            sendTelegramReply(chatId, "єє нєєєє, єт чо");
+        }
+    }
+
+    private void audioCommand(Long chatId, String fileId) {
+        if (!activeTgSessions.containsKey(chatId)) {
+            sendTelegramReply(chatId, "єє нєєєє, я хачу сінхранізацию с тг, так сказать");
+            return;
+        }
+        ServerMusicManager musicManager = activeTgSessions.get(chatId);
+
+        if (fileId != null) {
+            try {
+                GetFile getFileMethod = new GetFile();
+                getFileMethod.setFileId(fileId);
+                org.telegram.telegrambots.meta.api.objects.File file = execute(getFileMethod);
+
+                String tgFilePath = file.getFilePath();
+                String extension = ".mp3";
+                if (tgFilePath != null && tgFilePath.contains(".")) {
+                    extension = tgFilePath.substring(tgFilePath.lastIndexOf("."));
+                    if (extension.equals(".oga")) extension = ".ogg";
+                }
+
+                String safeFileName = "tg_audio_" + System.currentTimeMillis() + extension;
+                File localFile = downloadFile(file, new File("temp_audio/" + safeFileName));
+
+                if (localFile.length() == 0) {
+                    sendTelegramReply(chatId, "тэлэга передала порожній файл.");
+                    return;
+                }
+
+                playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
+                    @Override
+                    public void trackLoaded(AudioTrack track) {
+                        musicManager.player.playTrack(track);
+                        sendTelegramReply(chatId, "▶️ граю " + track.getInfo().title);
+                    }
+
+                    @Override
+                    public void playlistLoaded(AudioPlaylist audioPlaylist) {}
+
+                    @Override
+                    public void noMatches() {
+                        sendTelegramReply(chatId, "❌ дєскорд не зміг розпізнати формат файлу.");
+                    }
+
+                    @Override
+                    public void loadFailed(FriendlyException e) {
+                        sendTelegramReply(chatId, "❌ помілка завантаження " + e.getMessage());
+                    }
+                });
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendTelegramReply(chatId, "❌ помилка завантаження з тєлєграми");
+            }
+        }
     }
 }
