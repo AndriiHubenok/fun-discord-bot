@@ -1,5 +1,13 @@
 package org.example;
 
+import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
+import dev.lavalink.youtube.clients.AndroidVrWithThumbnail;
+import dev.lavalink.youtube.clients.MusicWithThumbnail;
+import dev.lavalink.youtube.clients.WebEmbeddedWithThumbnail;
+import dev.lavalink.youtube.clients.WebWithThumbnail;
+import dev.lavalink.youtube.clients.skeleton.Client;
 import io.github.cdimascio.dotenv.Dotenv;
 import moe.kyokobot.libdave.DaveFactory;
 import moe.kyokobot.libdave.NativeDaveFactory;
@@ -10,6 +18,7 @@ import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.example.api.ApiInteraction;
+import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
 import org.example.discord.SlashCommand;
 import org.example.discord.SlashCommandListener;
@@ -19,6 +28,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 
@@ -40,11 +51,49 @@ public class Main {
         ApiInteraction apiInteraction = new ApiInteraction();
         SlashCommand slashCommand = new SlashCommand(apiInteraction);
         SpotifyService spotifyService = new SpotifyService();
+
+        Map<String, ServerMusicManager> pendingPins = new ConcurrentHashMap<>();
+
+        Map<Long, ServerMusicManager> activeTgSessions = new ConcurrentHashMap<>();
+
         JDA jda = JDABuilder.createLight(botToken, Collections.emptyList())
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
                 .enableCache(CacheFlag.VOICE_STATE)
-                .addEventListeners(new SlashCommandListener(slashCommand, spotifyService))
+                .addEventListeners(new SlashCommandListener(slashCommand, spotifyService, pendingPins))
                 .setAudioModuleConfig(new AudioModuleConfig().withDaveSessionFactory(daveSessionFactory))
                 .build();
+
+        AudioPlayerManager playerManager = new DefaultAudioPlayerManager();
+
+        dev.lavalink.youtube.YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager(
+                true,
+                new Client[] {
+                        new MusicWithThumbnail(),
+                        new AndroidVrWithThumbnail(),
+                        new WebWithThumbnail(),
+                        new WebEmbeddedWithThumbnail()
+                }
+        );
+
+        playerManager.registerSourceManager(ytSourceManager);
+
+        AudioSourceManagers.registerRemoteSources(
+                playerManager,
+                com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioSourceManager.class
+        );
+
+        AudioSourceManagers.registerLocalSource(playerManager);
+
+        try {
+            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+            botsApi.registerBot(new TelegramBot(
+                    dotenv.get("TELEGRAM_BOT_TOKEN"),
+                    playerManager,
+                    pendingPins,
+                    activeTgSessions
+            ));
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 }
