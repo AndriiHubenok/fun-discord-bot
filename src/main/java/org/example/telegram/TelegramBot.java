@@ -8,12 +8,16 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.example.audio.ServerMusicManager;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Audio;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
+import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
+import java.util.List;
 import java.util.Map;
 
 public class TelegramBot extends TelegramLongPollingBot {
@@ -28,6 +32,20 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.playerManager = playerManager;
         this.pendingPins = pendingPins;
         this.activeTgSessions = activeTgSessions;
+        registerCommands();
+    }
+
+    public void registerCommands() {
+        List<BotCommand> commands = List.of(
+                new BotCommand("pin", "Bind Telegram chat to pending session"),
+                new BotCommand("help", "Show available commands")
+        );
+
+        try {
+            execute(new SetMyCommands(commands, new BotCommandScopeDefault(), null));
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -51,6 +69,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             audioCommand(chatId, fileId);
         } else if (update.getMessage().hasVoice()) {
             String fileId = update.getMessage().getVoice().getFileId();
+            audioCommand(chatId, fileId);
+        } else if (update.getMessage().hasVideoNote()) {
+            String fileId = update.getMessage().getVideoNote().getFileId();
             audioCommand(chatId, fileId);
         }
     }
@@ -76,7 +97,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (musicManager != null) {
             activeTgSessions.put(chatId, musicManager);
             pendingPins.remove(pin);
-            sendTelegramReply(chatId, "работаєм");
+            sendTelegramReply(chatId, "работаєм, кідай сюда рєп, відєа, галасавухи тєлак");
         } else {
             sendTelegramReply(chatId, "єє нєєєє, єт чо");
         }
