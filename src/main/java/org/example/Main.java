@@ -1,5 +1,7 @@
 package org.example;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.source.AudioSourceManagers;
@@ -30,6 +32,7 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
@@ -52,9 +55,15 @@ public class Main {
         SlashCommand slashCommand = new SlashCommand(apiInteraction);
         SpotifyService spotifyService = new SpotifyService();
 
-        Map<String, ServerMusicManager> pendingPins = new ConcurrentHashMap<>();
+        Cache<String, ServerMusicManager> pendingPinsCache = Caffeine.newBuilder()
+                .expireAfterWrite(3, TimeUnit.MINUTES)
+                .build();
+        Map<String, ServerMusicManager> pendingPins = pendingPinsCache.asMap();
 
-        Map<Long, ServerMusicManager> activeTgSessions = new ConcurrentHashMap<>();
+        Cache<Long, ServerMusicManager> activeTgSessionsCache = Caffeine.newBuilder()
+                .expireAfterAccess(15, TimeUnit.MINUTES)
+                .build();
+        Map<Long, ServerMusicManager> activeTgSessions = activeTgSessionsCache.asMap();
 
         JDA jda = JDABuilder.createLight(botToken, Collections.emptyList())
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)

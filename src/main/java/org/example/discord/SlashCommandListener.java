@@ -30,6 +30,9 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class SlashCommandListener extends ListenerAdapter {
     private final SlashCommand slashCommand;
@@ -84,8 +87,7 @@ public class SlashCommandListener extends ListenerAdapter {
                         .addOption(OptionType.STRING, "url", "YouTube URL of the song", true),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
-                Commands.slash("broadcast_tg", "Broadcast the song from Telegram Bot"),
-                Commands.slash("leave", "Makes the bot leave the server")
+                Commands.slash("broadcast_tg", "Broadcast the song from Telegram Bot")
         ).queue();
     }
 
@@ -237,13 +239,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 String pin = String.format("%04d", (int)(Math.random() * 10000));
                 pendingPins.put(pin, musicManager);
 
-                event.getHook().sendMessage("ждьом тваєго сігнала от с тг - " + dotenv.get("TELEGRAM_BOT_NAME") + "\nввєді в тг: /pin " + pin).queue();
-            }
-            case "leave" -> {
-                event.reply("гудбай")
-                        .setEphemeral(true)
-                        .flatMap(m -> event.getGuild().leave())
-                        .queue();
+                event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
             }
         }
     }

@@ -17,13 +17,20 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class TelegramBot extends TelegramLongPollingBot {
     private final AudioPlayerManager playerManager;
     private final Map<String, ServerMusicManager> pendingPins;
     private final Map<Long, ServerMusicManager> activeTgSessions;
+    private final ScheduledExecutorService scheduler;
+
 
     public TelegramBot(String botToken, AudioPlayerManager playerManager,
                        Map<String, ServerMusicManager> pendingPins,
@@ -32,6 +39,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.playerManager = playerManager;
         this.pendingPins = pendingPins;
         this.activeTgSessions = activeTgSessions;
+        this.scheduler = Executors.newScheduledThreadPool(1);
         registerCommands();
     }
 
@@ -63,16 +71,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         } else if (update.getMessage().hasAudio()) {
             String fileId = update.getMessage().getAudio().getFileId();
-            audioCommand(chatId, fileId);
+            int duration = update.getMessage().getAudio().getDuration();
+            audioCommand(chatId, fileId, duration);
         } else if (update.getMessage().hasVideo()) {
             String fileId = update.getMessage().getVideo().getFileId();
-            audioCommand(chatId, fileId);
+            int duration = update.getMessage().getVideo().getDuration();
+            audioCommand(chatId, fileId, duration);
         } else if (update.getMessage().hasVoice()) {
             String fileId = update.getMessage().getVoice().getFileId();
-            audioCommand(chatId, fileId);
+            int duration = update.getMessage().getVoice().getDuration();
+            audioCommand(chatId, fileId, duration);
         } else if (update.getMessage().hasVideoNote()) {
             String fileId = update.getMessage().getVideoNote().getFileId();
-            audioCommand(chatId, fileId);
+            int duration = update.getMessage().getVideoNote().getDuration();
+            audioCommand(chatId, fileId, duration);
         }
     }
 
@@ -103,7 +115,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void audioCommand(Long chatId, String fileId) {
+    private void audioCommand(Long chatId, String fileId, int duration) {
         if (!activeTgSessions.containsKey(chatId)) {
             sendTelegramReply(chatId, "єє нєєєє, я хачу сінхранізацию с тг, так сказать");
             return;
@@ -130,6 +142,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendTelegramReply(chatId, "тэлэга передала порожній файл.");
                     return;
                 }
+
+                scheduler.schedule(() -> {
+                    try {
+                        Files.delete(localFile.toPath());
+                        System.out.println("Deleted temporary file: " + localFile.getName());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.err.println("Failed to delete temporary file: " + localFile.getName());
+                    }
+                }, 120L + duration, TimeUnit.SECONDS);
 
                 playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
                     @Override
