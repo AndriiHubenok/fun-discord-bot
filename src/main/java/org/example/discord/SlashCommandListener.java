@@ -13,9 +13,12 @@ import io.github.cdimascio.dotenv.Dotenv;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
+import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.thread.member.ThreadMemberLeaveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
@@ -170,6 +173,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 audioManager.openAudioConnection(userVoiceChannel);
 
                 ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+                musicManager.lastCommandChannel = event.getChannel();
 
                 if (spotifyService.isSpotifyTrackUrl(url)) {
                     try {
@@ -236,10 +240,44 @@ public class SlashCommandListener extends ListenerAdapter {
                 audioManager.openAudioConnection(userVoiceChannel);
 
                 ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+                musicManager.lastCommandChannel = event.getChannel();
                 String pin = String.format("%04d", (int)(Math.random() * 10000));
                 pendingPins.put(pin, musicManager);
 
                 event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
+            }
+        }
+    }
+
+    @Override
+    public void onGuildVoiceUpdate(GuildVoiceUpdateEvent event) {
+        Guild guild = event.getGuild();
+        Member selfMember = guild.getSelfMember();
+        GuildVoiceState selfVoiceState = selfMember.getVoiceState();
+
+        if (selfVoiceState == null || !selfVoiceState.inAudioChannel()) return;
+
+        AudioChannel botChannel = selfVoiceState.getChannel();
+
+        if (botChannel.equals(event.getChannelLeft()) || botChannel.equals(event.getChannelJoined())) {
+
+            long humansInChannel = botChannel.getMembers().stream()
+                    .filter(member -> !member.getUser().isBot())
+                    .count();
+
+            if (humansInChannel == 0) {
+
+                long guildId = Long.parseLong(guild.getId());
+                ServerMusicManager mgr = musicManagers.get(guildId);
+                if (mgr != null) {
+                    mgr.scheduler.queue.clear();
+                    mgr.player.stopTrack();
+
+                    if (mgr.lastCommandChannel != null) {
+                        mgr.lastCommandChannel.sendMessage("👋 та пашлі ви").queue();
+                    }
+                }
+                guild.getAudioManager().closeAudioConnection();
             }
         }
     }

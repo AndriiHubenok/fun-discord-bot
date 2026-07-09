@@ -151,7 +151,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         e.printStackTrace();
                         System.err.println("Failed to delete temporary file: " + localFile.getName());
                     }
-                }, 120L + duration, TimeUnit.SECONDS);
+                }, 7200L + duration, TimeUnit.SECONDS);
 
                 playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
                     @Override
