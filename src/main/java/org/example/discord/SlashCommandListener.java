@@ -282,12 +282,16 @@ public class SlashCommandListener extends ListenerAdapter {
         }
     }
 
-    private ServerMusicManager getOrCreateServerMusicManager(Guild guild) {
+    private synchronized ServerMusicManager getOrCreateServerMusicManager(Guild guild) {
         long guildId = Long.parseLong(guild.getId());
-        return musicManagers.computeIfAbsent(guildId, id -> {
-            ServerMusicManager mgr = new ServerMusicManager(playerManager);
-            guild.getAudioManager().setSendingHandler(mgr.getSendHandler());
-            return mgr;
-        });
+        ServerMusicManager musicManager = musicManagers.get(guildId);
+
+        if (musicManager == null) {
+            musicManager = new ServerMusicManager(playerManager, guild);
+            musicManagers.put(guildId, musicManager);
+            guild.getAudioManager().setSendingHandler(musicManager.getSendHandler());
+        }
+
+        return musicManager;
     }
 }
