@@ -26,11 +26,13 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.managers.AudioManager;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
+import org.example.audio.spotify.SpotifyTrack;
 import org.example.telegram.TelegramBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
+import java.awt.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -175,30 +177,73 @@ public class SlashCommandListener extends ListenerAdapter {
                 ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
                 musicManager.lastCommandChannel = event.getChannel();
 
+                SpotifyTrack spotifyTrack = null;
+
                 if (spotifyService.isSpotifyTrackUrl(url)) {
                     try {
-                        url = spotifyService.convertTrackUrlToYoutubeSearch(url);
+                        spotifyTrack = spotifyService.getSpotifyTrack(url);
+                        url = "ytsearch:" + spotifyTrack.getArtist() + " - " + spotifyTrack.getTitle();
                     } catch (Exception e) {
                         event.getHook().sendMessage("❌ не вдалося прочитати спатіфай трєк: " + e.getMessage()).queue();
                         return;
                     }
                 }
 
+                SpotifyTrack finalSpotifyTrack = spotifyTrack;
                 playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
                         musicManager.player.playTrack(track);
-                        event.getHook().sendMessage("▶️ вмікаю: " + track.getInfo().title).queue();
+
+                        EmbedBuilder embed = new EmbedBuilder();
+
+                        if (finalSpotifyTrack != null) {
+                            embed.setColor(Color.decode("#1DB954"));
+                            embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
+                            embed.addField("іспалняєт:", finalSpotifyTrack.getArtist(), false);
+                            embed.setThumbnail(finalSpotifyTrack.getImageUrl());
+                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1024px-Spotify_logo_without_text.svg.png");
+                        } else {
+                            embed.setColor(Color.decode("#FF0000"));
+                            embed.setTitle(track.getInfo().title, track.getInfo().uri);
+                            embed.addField("канал/автор", track.getInfo().author, false);
+                            embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
+
+                            if (track.getInfo().uri.contains("youtube.com")) {
+                                embed.setThumbnail("https://img.youtube.com/vi/" + track.getInfo().identifier + "/mqdefault.jpg");
+                            }
+                        }
+
+                        event.getHook().sendMessageEmbeds(embed.build()).queue();
                     }
 
                     @Override
                     public void playlistLoaded(AudioPlaylist playlist) {
-                        AudioTrack firstTrack = playlist.getSelectedTrack();
-                        if (firstTrack == null) {
-                            firstTrack = playlist.getTracks().get(0);
+                        AudioTrack track = playlist.getSelectedTrack();
+                        if (track == null) {
+                            track = playlist.getTracks().get(0);
                         }
-                        musicManager.player.playTrack(firstTrack);
-                        event.getHook().sendMessage("▶️ вмікаю трєк із плейліста: " + firstTrack.getInfo().title).queue();
+                        musicManager.player.playTrack(track);
+
+                        EmbedBuilder embed = new EmbedBuilder();
+
+                        if (finalSpotifyTrack != null) {
+                            embed.setColor(Color.decode("#1DB954"));
+                            embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
+                            embed.addField("іспалняєт:", finalSpotifyTrack.getArtist(), false);
+                            embed.setThumbnail(finalSpotifyTrack.getImageUrl());
+                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/7/78/Spotify_2.png?_=20230904105040");
+                        } else {
+                            embed.setColor(Color.decode("#FF0000"));
+                            embed.setTitle(track.getInfo().title, track.getInfo().uri);
+                            embed.addField("канал/автор", track.getInfo().author, false);
+
+                            if (track.getInfo().uri.contains("youtube.com")) {
+                                embed.setThumbnail("https://img.youtube.com/vi/" + track.getInfo().identifier + "/mqdefault.jpg");
+                            }
+                        }
+
+                        event.getHook().sendMessageEmbeds(embed.build()).queue();
                     }
 
                     @Override
