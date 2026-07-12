@@ -74,7 +74,7 @@ public class SpotifyService {
 
         String externalUrl = json.getAsJsonObject("external_urls").get("spotify").getAsString();
 
-        String imageUrl = json.getAsJsonObject("album").getAsJsonArray("images").get(2).getAsJsonObject().get("url").getAsString();
+        String imageUrl = json.getAsJsonObject("album").getAsJsonArray("images").get(1).getAsJsonObject().get("url").getAsString();
 
         return new SpotifyTrack(trackId, title, artist, externalUrl, imageUrl);
     }

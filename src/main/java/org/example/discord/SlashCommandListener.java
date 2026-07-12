@@ -198,13 +198,13 @@ public class SlashCommandListener extends ListenerAdapter {
                         EmbedBuilder embed = new EmbedBuilder();
 
                         if (finalSpotifyTrack != null) {
-                            embed.setColor(Color.decode("#1DB954"));
+                            embed.setColor(Color.decode("#1ed760"));
                             embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
                             embed.addField("іспалняєт:", finalSpotifyTrack.getArtist(), false);
                             embed.setThumbnail(finalSpotifyTrack.getImageUrl());
                             embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1024px-Spotify_logo_without_text.svg.png");
                         } else {
-                            embed.setColor(Color.decode("#FF0000"));
+                            embed.setColor(Color.decode("#d9252a"));
                             embed.setTitle(track.getInfo().title, track.getInfo().uri);
                             embed.addField("канал/автор", track.getInfo().author, false);
                             embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
