@@ -175,7 +175,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                         musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
-
                         embed.setColor(Color.decode("#1d94cf"));
                         if (audio.getTitle() != null) {
                             embed.setTitle(audio.getTitle());
@@ -183,7 +182,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                             embed.setTitle(audio.getName());
                         }
                         if (audio.getPerformer() != null) {
-                            embed.addField("іспалняєт:", audio.getPerformer(), false);
+                            embed.addField("іспалняєт:", String.format("***%s***", audio.getPerformer()), false);
+                        }
+                        int seconds = audio.getDuration() % 60;
+                        int minutes = audio.getDuration() / 60;
+                        int hours = minutes / 60;
+                        if (hours > 0) {
+                            minutes -= hours * 60;
+                            embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
+                        } else {
+                            embed.addField("врємя: ", String.format("`%d:%02d`", minutes, seconds), false);
                         }
 
                         embed.setFooter("работаєм с Telegram", "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Telegram_2019_Logo.svg/960px-Telegram_2019_Logo.svg.png");

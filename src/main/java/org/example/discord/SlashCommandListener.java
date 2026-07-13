@@ -197,16 +197,27 @@ public class SlashCommandListener extends ListenerAdapter {
 
                         EmbedBuilder embed = new EmbedBuilder();
 
+                        long duration = track.getInfo().length;
+                        long seconds = duration % 60000 / 1000;
+                        long minutes = duration / 60000;
+                        long hours = minutes / 60;
+                        if (hours > 0) {
+                            minutes -= hours * 60;
+                            embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
+                        } else {
+                            embed.addField("врємя: ", String.format("`%02d:%02d`", minutes, seconds), false);
+                        }
+
                         if (finalSpotifyTrack != null) {
                             embed.setColor(Color.decode("#1ed760"));
                             embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
-                            embed.addField("іспалняєт:", finalSpotifyTrack.getArtist(), false);
+                            embed.addField("іспалняєт:", String.format("***%s***", finalSpotifyTrack.getArtist()), false);
                             embed.setThumbnail(finalSpotifyTrack.getImageUrl());
-                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/1024px-Spotify_logo_without_text.svg.png");
+                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/960px-Spotify_logo_without_text.svg.png");
                         } else {
                             embed.setColor(Color.decode("#d9252a"));
                             embed.setTitle(track.getInfo().title, track.getInfo().uri);
-                            embed.addField("канал/автор", track.getInfo().author, false);
+                            embed.addField("канал/автор", String.format("***%s***", track.getInfo().author), false);
                             embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
 
                             if (track.getInfo().uri.contains("youtube.com")) {
@@ -227,16 +238,28 @@ public class SlashCommandListener extends ListenerAdapter {
 
                         EmbedBuilder embed = new EmbedBuilder();
 
-                        if (finalSpotifyTrack != null) {
-                            embed.setColor(Color.decode("#1DB954"));
-                            embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
-                            embed.addField("іспалняєт:", finalSpotifyTrack.getArtist(), false);
-                            embed.setThumbnail(finalSpotifyTrack.getImageUrl());
-                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/7/78/Spotify_2.png?_=20230904105040");
+                        long duration = track.getInfo().length;
+                        long seconds = duration % 60000 / 1000;
+                        long minutes = duration / 60000;
+                        long hours = minutes / 60;
+                        if (hours > 0) {
+                            minutes -= hours * 60;
+                            embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
                         } else {
-                            embed.setColor(Color.decode("#FF0000"));
+                            embed.addField("врємя: ", String.format("`%02d:%02d`", minutes, seconds), false);
+                        }
+
+                        if (finalSpotifyTrack != null) {
+                            embed.setColor(Color.decode("#1ed760"));
+                            embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
+                            embed.addField("іспалняєт:", String.format("***%s***", finalSpotifyTrack.getArtist()), false);
+                            embed.setThumbnail(finalSpotifyTrack.getImageUrl());
+                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/960px-Spotify_logo_without_text.svg.png");
+                        } else {
+                            embed.setColor(Color.decode("#d9252a"));
                             embed.setTitle(track.getInfo().title, track.getInfo().uri);
-                            embed.addField("канал/автор", track.getInfo().author, false);
+                            embed.addField("канал/автор", String.format("***%s***", track.getInfo().author), false);
+                            embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
 
                             if (track.getInfo().uri.contains("youtube.com")) {
                                 embed.setThumbnail("https://img.youtube.com/vi/" + track.getInfo().identifier + "/mqdefault.jpg");
