@@ -5,6 +5,8 @@ import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import org.example.audio.ServerMusicManager;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
@@ -16,6 +18,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -70,21 +73,33 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
 
         } else if (update.getMessage().hasAudio()) {
-            String fileId = update.getMessage().getAudio().getFileId();
-            int duration = update.getMessage().getAudio().getDuration();
-            audioCommand(chatId, fileId, duration);
+            TelegramAudio audio = new TelegramAudio(
+                    update.getMessage().getAudio().getFileId(),
+                    update.getMessage().getAudio().getFileName(),
+                    update.getMessage().getAudio().getTitle(),
+                    update.getMessage().getAudio().getPerformer(),
+                    update.getMessage().getAudio().getDuration()
+            );
+            audioCommand(chatId, audio);
         } else if (update.getMessage().hasVideo()) {
-            String fileId = update.getMessage().getVideo().getFileId();
-            int duration = update.getMessage().getVideo().getDuration();
-            audioCommand(chatId, fileId, duration);
+            TelegramAudio audio = new TelegramAudio(
+                    update.getMessage().getVideo().getFileId(),
+                    update.getMessage().getVideo().getFileName(),
+                    update.getMessage().getVideo().getDuration()
+            );
+            audioCommand(chatId, audio);
         } else if (update.getMessage().hasVoice()) {
-            String fileId = update.getMessage().getVoice().getFileId();
-            int duration = update.getMessage().getVoice().getDuration();
-            audioCommand(chatId, fileId, duration);
+            TelegramAudio audio = new TelegramAudio(
+                    update.getMessage().getVoice().getFileId(),
+                    update.getMessage().getVoice().getDuration()
+            );
+            audioCommand(chatId, audio);
         } else if (update.getMessage().hasVideoNote()) {
-            String fileId = update.getMessage().getVideoNote().getFileId();
-            int duration = update.getMessage().getVideoNote().getDuration();
-            audioCommand(chatId, fileId, duration);
+            TelegramAudio audio = new TelegramAudio(
+                    update.getMessage().getVideoNote().getFileId(),
+                    update.getMessage().getVideoNote().getDuration()
+            );
+            audioCommand(chatId, audio);
         }
     }
 
@@ -115,17 +130,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void audioCommand(Long chatId, String fileId, int duration) {
+    private void audioCommand(Long chatId, TelegramAudio audio) {
         if (!activeTgSessions.containsKey(chatId)) {
             sendTelegramReply(chatId, "єє нєєєє, я хачу сінхранізацию с тг, так сказать");
             return;
         }
         ServerMusicManager musicManager = activeTgSessions.get(chatId);
 
-        if (fileId != null) {
+        if (audio.getId() != null) {
             try {
                 GetFile getFileMethod = new GetFile();
-                getFileMethod.setFileId(fileId);
+                getFileMethod.setFileId(audio.getId());
                 org.telegram.telegrambots.meta.api.objects.File file = execute(getFileMethod);
 
                 String tgFilePath = file.getFilePath();
@@ -151,13 +166,37 @@ public class TelegramBot extends TelegramLongPollingBot {
                         e.printStackTrace();
                         System.err.println("Failed to delete temporary file: " + localFile.getName());
                     }
-                }, 7200L + duration, TimeUnit.SECONDS);
+                }, 7200L + audio.getDuration(), TimeUnit.SECONDS);
+
 
                 playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
                         musicManager.player.playTrack(track);
-                        sendTelegramReply(chatId, "▶️ граю " + track.getInfo().title);
+
+                        EmbedBuilder embed = new EmbedBuilder();
+                        embed.setColor(Color.decode("#1d94cf"));
+                        if (audio.getTitle() != null) {
+                            embed.setTitle(audio.getTitle());
+                        } else {
+                            embed.setTitle(audio.getName());
+                        }
+                        if (audio.getPerformer() != null) {
+                            embed.addField("іспалняєт:", String.format("***%s***", audio.getPerformer()), false);
+                        }
+                        int seconds = audio.getDuration() % 60;
+                        int minutes = audio.getDuration() / 60;
+                        int hours = minutes / 60;
+                        if (hours > 0) {
+                            minutes -= hours * 60;
+                            embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
+                        } else {
+                            embed.addField("врємя: ", String.format("`%d:%02d`", minutes, seconds), false);
+                        }
+
+                        embed.setFooter("работаєм с Telegram", "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Telegram_2019_Logo.svg/960px-Telegram_2019_Logo.svg.png");
+
+                        musicManager.lastCommandChannel.sendMessageEmbeds(embed.build()).queue();
                     }
 
                     @Override

@@ -2,6 +2,7 @@ package org.example.audio.spotify;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -43,18 +44,12 @@ public class SpotifyService {
         return url != null && TRACK_PATTERN.matcher(url).find();
     }
 
-    public String convertTrackUrlToYoutubeSearch(String spotifyUrl) throws IOException, InterruptedException {
+    public SpotifyTrack getSpotifyTrack(String spotifyUrl) throws IOException, InterruptedException {
         String trackId = extractTrackId(spotifyUrl);
         if (trackId == null) {
             throw new IllegalArgumentException("Invalid Spotify track URL");
         }
 
-        SpotifyTrack track = getTrack(trackId);
-        String query = track.getArtist() + " - " + track.getTitle();
-        return "ytsearch:" + query;
-    }
-
-    public SpotifyTrack getTrack(String trackId) throws IOException, InterruptedException {
         String token = getValidAccessToken();
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -79,7 +74,9 @@ public class SpotifyService {
 
         String externalUrl = json.getAsJsonObject("external_urls").get("spotify").getAsString();
 
-        return new SpotifyTrack(trackId, title, artist, externalUrl);
+        String imageUrl = json.getAsJsonObject("album").getAsJsonArray("images").get(1).getAsJsonObject().get("url").getAsString();
+
+        return new SpotifyTrack(trackId, title, artist, externalUrl, imageUrl);
     }
 
     private String extractTrackId(String spotifyUrl) {
