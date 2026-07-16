@@ -90,6 +90,7 @@ public class SlashCommandListener extends ListenerAdapter {
                         .addOption(OptionType.STRING, "city", "City name", true),
                 Commands.slash("play", "Play a song from YouTube")
                         .addOption(OptionType.STRING, "url", "YouTube URL of the song", true),
+                Commands.slash("skip", "Skip a song"),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
                 Commands.slash("broadcast_tg", "Broadcast the song from Telegram Bot")
@@ -193,7 +194,8 @@ public class SlashCommandListener extends ListenerAdapter {
                 playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
-                        musicManager.player.playTrack(track);
+                        musicManager.scheduler.queue(track);
+                        //musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
 
@@ -234,7 +236,8 @@ public class SlashCommandListener extends ListenerAdapter {
                         if (track == null) {
                             track = playlist.getTracks().get(0);
                         }
-                        musicManager.player.playTrack(track);
+                        musicManager.scheduler.queue(track);
+                        //musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
 
@@ -279,6 +282,11 @@ public class SlashCommandListener extends ListenerAdapter {
                         event.getHook().sendMessage("❌ помілка: " + exception.getMessage()).queue();
                     }
                 });
+            }
+            case "skip" -> {
+                ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
+                mgr.scheduler.nextTrack();
+                event.reply("⏭ трєк пропущєн").queue();
             }
             case "stop" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());

@@ -172,7 +172,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
-                        musicManager.player.playTrack(track);
+                        musicManager.scheduler.queue(track);
+                        //musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
                         embed.setColor(Color.decode("#1d94cf"));
