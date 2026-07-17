@@ -14,12 +14,14 @@ public class TrackScheduler extends AudioEventAdapter {
     private final ScheduledExecutorService timer;
     private ScheduledFuture<?> disconnectTask;
     private final Runnable disconnectAction;
+    public AudioTrack currentTrack;
 
     public TrackScheduler(AudioPlayer player, Runnable disconnectAction) {
         this.player = player;
         this.queue = new LinkedBlockingQueue<>();
         this.disconnectAction = disconnectAction;
         timer = Executors.newSingleThreadScheduledExecutor();
+        currentTrack = null;
     }
 
     public void startTimer() {
@@ -43,10 +45,12 @@ public class TrackScheduler extends AudioEventAdapter {
 
     public void nextTrack() {
         player.startTrack(queue.poll(), false);
+
     }
 
     @Override
     public void onTrackStart(AudioPlayer player, AudioTrack track) {
+        currentTrack = track;
         cancelTimer();
     }
 
