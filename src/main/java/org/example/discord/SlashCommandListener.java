@@ -199,9 +199,12 @@ public class SlashCommandListener extends ListenerAdapter {
 
                     @Override
                     public void playlistLoaded(AudioPlaylist playlist) {
-                        AudioTrack track = playlist.getSelectedTrack();
-                        if (track == null) {
-                            track = playlist.getTracks().get(0);
+                        AudioTrack track;
+                        if (playlist.getTracks().size() > 1 && finalSpotifyTrack == null) {
+                            playlist.getTracks().forEach(this::addTrackToQueue);
+                            return;
+                        } else {
+                            track = playlist.getTracks().getFirst();
                         }
                         addTrackToQueue(track);
                     }
@@ -218,7 +221,6 @@ public class SlashCommandListener extends ListenerAdapter {
 
                     private void addTrackToQueue(AudioTrack track){
                         musicManager.scheduler.queue(track);
-                        //musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
 
@@ -231,7 +233,7 @@ public class SlashCommandListener extends ListenerAdapter {
                         } else {
                             embed.setColor(Color.decode("#d9252a"));
                             embed.setTitle(track.getInfo().title, track.getInfo().uri);
-                            embed.addField("канал/автор", String.format("***%s***", track.getInfo().author), false);
+                            embed.addField("канал/автор:", String.format("***%s***", track.getInfo().author), false);
                             embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
 
                             if (track.getInfo().uri.contains("youtube.com")) {
@@ -281,19 +283,19 @@ public class SlashCommandListener extends ListenerAdapter {
             case "skip" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
                 mgr.scheduler.nextTrack();
-                event.reply("⏭ трєк пропущєн").queue();
+                event.reply(":track_next: трєк пропущєн").queue();
             }
             case "stop" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
                 mgr.scheduler.queue.clear();
                 mgr.player.stopTrack();
-                event.reply("⏹️ штоп").queue();
+                event.reply(":stop_button: штоп").queue();
             }
             case "pause" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
                 boolean paused = !mgr.player.isPaused();
                 mgr.player.setPaused(paused);
-                event.reply(paused ? "⏸️ бауза" : "▶️ паєхалі").queue();
+                event.reply(paused ? ":pause_button: бауза" : ":arrow_forward: паєхалі").queue();
             }
             case "broadcast_tg" -> {
                 event.deferReply().queue();
