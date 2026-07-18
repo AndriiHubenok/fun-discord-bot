@@ -172,7 +172,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 playerManager.loadItem(localFile.getAbsolutePath(), new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
-                        musicManager.player.playTrack(track);
+                        musicManager.scheduler.queue(track);
+                        //musicManager.player.playTrack(track);
 
                         EmbedBuilder embed = new EmbedBuilder();
                         embed.setColor(Color.decode("#1d94cf"));
@@ -184,14 +185,34 @@ public class TelegramBot extends TelegramLongPollingBot {
                         if (audio.getPerformer() != null) {
                             embed.addField("іспалняєт:", String.format("***%s***", audio.getPerformer()), false);
                         }
-                        int seconds = audio.getDuration() % 60;
-                        int minutes = audio.getDuration() / 60;
-                        int hours = minutes / 60;
+                        long seconds = audio.getDuration() % 60;
+                        long minutes = audio.getDuration() / 60;
+                        long hours = minutes / 60;
                         if (hours > 0) {
                             minutes -= hours * 60;
                             embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
                         } else {
                             embed.addField("врємя: ", String.format("`%d:%02d`", minutes, seconds), false);
+                        }
+
+                        if (!musicManager.scheduler.queue.isEmpty()) {
+                            long duration = audio.getDuration();
+                            if (musicManager.scheduler.currentTrack != null) {
+                                duration += musicManager.scheduler.currentTrack.getDuration();
+                            }
+                            if (musicManager.scheduler.queue.size() > 1) {
+                                duration += musicManager.scheduler.queue.stream()
+                                        .reduce(0L, (sum, t) -> sum + t.getDuration(), Long::sum) - audio.getDuration();
+                            }
+                            seconds = duration % 60000 / 1000;
+                            minutes = duration / 60000;
+                            hours = minutes / 60;
+                            if (hours > 0) {
+                                minutes -= hours * 60;
+                                embed.addField("врємя очєрєді: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
+                            } else {
+                                embed.addField("врємя очєрєді: ", String.format("`%02d:%02d`", minutes, seconds), false);
+                            }
                         }
 
                         embed.setFooter("работаєм с Telegram", "https://upload.wikimedia.org/wikipedia/commons/thumb/8/83/Telegram_2019_Logo.svg/960px-Telegram_2019_Logo.svg.png");
