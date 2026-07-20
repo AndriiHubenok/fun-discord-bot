@@ -22,6 +22,7 @@ import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import org.example.api.ApiInteraction;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
+import org.example.audio.youtube.YoutubeService;
 import org.example.discord.SlashCommand;
 import org.example.discord.SlashCommandListener;
 import org.example.telegram.TelegramBot;
@@ -54,6 +55,7 @@ public class Main {
         ApiInteraction apiInteraction = new ApiInteraction();
         SlashCommand slashCommand = new SlashCommand(apiInteraction);
         SpotifyService spotifyService = new SpotifyService();
+        YoutubeService youtubeService = new YoutubeService();
 
         Cache<String, ServerMusicManager> pendingPinsCache = Caffeine.newBuilder()
                 .expireAfterWrite(3, TimeUnit.MINUTES)
@@ -68,7 +70,7 @@ public class Main {
         JDA jda = JDABuilder.createLight(botToken, Collections.emptyList())
                 .enableIntents(GatewayIntent.GUILD_VOICE_STATES)
                 .enableCache(CacheFlag.VOICE_STATE)
-                .addEventListeners(new SlashCommandListener(slashCommand, spotifyService, pendingPins))
+                .addEventListeners(new SlashCommandListener(slashCommand, spotifyService, youtubeService, pendingPins))
                 .setAudioModuleConfig(new AudioModuleConfig().withDaveSessionFactory(daveSessionFactory))
                 .build();
 

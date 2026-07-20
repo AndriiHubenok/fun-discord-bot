@@ -27,6 +27,7 @@ import net.dv8tion.jda.api.managers.AudioManager;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
 import org.example.audio.spotify.SpotifyTrack;
+import org.example.audio.youtube.YoutubeService;
 import org.example.telegram.TelegramBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -43,14 +44,16 @@ public class SlashCommandListener extends ListenerAdapter {
     private final SlashCommand slashCommand;
     private final AudioPlayerManager playerManager;
     private final SpotifyService spotifyService;
+    private final YoutubeService youtubeService;
     private final Map<Long, ServerMusicManager> musicManagers;
     private final Map<String, ServerMusicManager> pendingPins;
 
-    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService, Map<String, ServerMusicManager> pendingPins) {
+    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService, YoutubeService youtubeService, Map<String, ServerMusicManager> pendingPins) {
         this.slashCommand = slashCommand;
         this.musicManagers = new ConcurrentHashMap<>();
         this.playerManager = new DefaultAudioPlayerManager();
         this.spotifyService = spotifyService;
+        this.youtubeService = youtubeService;
         this.pendingPins = pendingPins;
 
         dev.lavalink.youtube.YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager(
@@ -89,7 +92,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("forecast_detailed", "Get detailed forecast information for a specific city")
                         .addOption(OptionType.STRING, "city", "City name", true),
                 Commands.slash("play", "Play a song from YouTube")
-                        .addOption(OptionType.STRING, "url", "YouTube URL of the song", true),
+                        .addOption(OptionType.STRING, "name_or_url", "Name or URL (YouTube, Spotify) of the song", true),
                 Commands.slash("skip", "Skip a song"),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
@@ -161,7 +164,7 @@ public class SlashCommandListener extends ListenerAdapter {
             }
             case "play" -> {
                 event.deferReply().queue();
-                String url = event.getOption("url", OptionMapping::getAsString);
+                String url = event.getOption("name_or_url", OptionMapping::getAsString);
 
                 GuildVoiceState voiceState = event.getMember().getVoiceState();
 
@@ -180,7 +183,7 @@ public class SlashCommandListener extends ListenerAdapter {
 
                 SpotifyTrack spotifyTrack = null;
 
-                if (spotifyService.isSpotifyTrackUrl(url)) {
+                if (spotifyService.isValidTrackUrl(url)) {
                     try {
                         spotifyTrack = spotifyService.getSpotifyTrack(url);
                         url = "ytsearch:" + spotifyTrack.getArtist() + " - " + spotifyTrack.getTitle();
@@ -188,9 +191,12 @@ public class SlashCommandListener extends ListenerAdapter {
                         event.getHook().sendMessage("❌ не вдалося прочитати спатіфай трєк: " + e.getMessage()).queue();
                         return;
                     }
+                } else if (!youtubeService.isValidTrackUrl(url)) {
+                    url = "ytsearch:" + url;
                 }
 
                 SpotifyTrack finalSpotifyTrack = spotifyTrack;
+                String finalUrl = url;
                 playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandler() {
                     @Override
                     public void trackLoaded(AudioTrack track) {
@@ -200,7 +206,7 @@ public class SlashCommandListener extends ListenerAdapter {
                     @Override
                     public void playlistLoaded(AudioPlaylist playlist) {
                         AudioTrack track;
-                        if (playlist.getTracks().size() > 1 && finalSpotifyTrack == null) {
+                        if (playlist.getTracks().size() > 1 && !finalUrl.startsWith("ytsearch:")) {
                             playlist.getTracks().forEach(this::addTrackToQueue);
                             return;
                         } else {

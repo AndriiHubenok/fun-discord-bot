@@ -5,6 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import io.github.cdimascio.dotenv.Dotenv;
+import org.example.audio.StreamingService;
 
 import java.io.IOException;
 import java.net.URI;
@@ -18,7 +19,7 @@ import java.util.Base64;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class SpotifyService {
+public class SpotifyService extends StreamingService {
     private static final String TOKEN_URL = "https://accounts.spotify.com/api/token";
     private static final String TRACK_URL = "https://api.spotify.com/v1/tracks/";
     private static final Pattern TRACK_PATTERN =
@@ -40,7 +41,8 @@ public class SpotifyService {
         this.gson = new Gson();
     }
 
-    public boolean isSpotifyTrackUrl(String url) {
+    @Override
+    public boolean isValidTrackUrl(String url) {
         return url != null && TRACK_PATTERN.matcher(url).find();
     }
 
