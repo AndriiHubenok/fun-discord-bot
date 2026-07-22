@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.thread.member.ThreadMemberLeaveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -182,6 +183,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 musicManager.lastCommandChannel = event.getChannel();
 
                 SpotifyTrack spotifyTrack = null;
+                boolean isSearch = false;
 
                 if (spotifyService.isValidTrackUrl(url)) {
                     try {
@@ -193,11 +195,12 @@ public class SlashCommandListener extends ListenerAdapter {
                     }
                 } else if (!youtubeService.isValidTrackUrl(url)) {
                     url = "ytsearch:" + url;
+                    isSearch = true;
                 }
 
                 String finalUrl = url;
                 SpotifyTrack finalSpotifyTrack = spotifyTrack;
-                playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandlerImpl(event, musicManager, finalUrl, finalSpotifyTrack));
+                playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandlerImpl(event, null, musicManager, finalUrl, finalSpotifyTrack, isSearch));
             }
             case "skip" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
@@ -238,6 +241,24 @@ public class SlashCommandListener extends ListenerAdapter {
 
                 event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
             }
+        }
+    }
+
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event) {
+        String buttonId = event.getComponentId();
+
+        if (buttonId.startsWith("play_")) {
+            String trackId = buttonId.replace("play_", "");
+
+            event.getMessage().delete().queue();
+
+            String trackUrl = "https://www.youtube.com/watch?v=" + trackId;
+
+            ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+            musicManager.lastCommandChannel = event.getChannel();
+
+            playerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandlerImpl(null, event, musicManager, trackUrl, null, false));
         }
     }
 

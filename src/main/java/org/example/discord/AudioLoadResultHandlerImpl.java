@@ -5,23 +5,37 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyTrack;
 
-import java.awt.*;
+import javax.swing.*;
+import java.awt.Color;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
     private final SlashCommandInteractionEvent event;
+    private final ButtonInteractionEvent buttonEvent;
     private final ServerMusicManager musicManager;
     private final String finalUrl;
     private final SpotifyTrack finalSpotifyTrack;
+    private final boolean isSearch;
 
-    public AudioLoadResultHandlerImpl(SlashCommandInteractionEvent event, ServerMusicManager musicManager, String url, SpotifyTrack spotifyTrack) {
+    public AudioLoadResultHandlerImpl(SlashCommandInteractionEvent event, ButtonInteractionEvent buttonEvent,
+                                      ServerMusicManager musicManager, String url, SpotifyTrack spotifyTrack, boolean isSearch) {
         this.event = event;
+        this.buttonEvent = buttonEvent;
         this.musicManager = musicManager;
         this.finalUrl = url;
         this.finalSpotifyTrack = spotifyTrack;
+        this.isSearch = isSearch;
     }
 
     @Override
@@ -31,6 +45,11 @@ public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
 
     @Override
     public void playlistLoaded(AudioPlaylist playlist) {
+        if (isSearch) {
+            responseWithPossibleTracks(playlist);
+            return;
+        }
+
         AudioTrack track;
         if (playlist.getTracks().size() > 1 && !finalUrl.startsWith("ytsearch:")) {
             playlist.getTracks().forEach(this::addTrackToQueue);
@@ -38,16 +57,25 @@ public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
         } else {
             track = playlist.getTracks().getFirst();
         }
+
         addTrackToQueue(track);
     }
 
     @Override
     public void noMatches() {
+        if (buttonEvent != null) {
+            buttonEvent.getHook().sendMessage("❌ ніхтс нєма").queue();
+            return;
+        }
         event.getHook().sendMessage("❌ ніхтс нєма").queue();
     }
 
     @Override
     public void loadFailed(FriendlyException exception) {
+        if (buttonEvent != null) {
+            buttonEvent.getHook().sendMessage("❌ помілка: " + exception.getMessage()).queue();
+            return;
+        }
         event.getHook().sendMessage("❌ помілка: " + exception.getMessage()).queue();
     }
 
@@ -88,6 +116,10 @@ public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
             addDurationFieldToEmbed(embed, duration, true);
         }
 
+        if (buttonEvent != null) {
+            buttonEvent.getHook().sendMessageEmbeds(embed.build()).queue();
+            return;
+        }
         event.getHook().sendMessageEmbeds(embed.build()).queue();
     }
 
@@ -109,5 +141,36 @@ public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
                 embed.addField("врємя: ", String.format("`%02d:%02d`", minutes, seconds), false);
             }
         }
+    }
+
+    private void responseWithPossibleTracks(AudioPlaylist playlist){
+        List<AudioTrack> tracks = playlist.getTracks().stream()
+                .limit(5).toList();
+
+        EmbedBuilder embed = new EmbedBuilder();
+        List<Button> buttons = new ArrayList<>();
+
+        embed.setColor(Color.decode("#d9252a"));
+        embed.setTitle("рєзультати пошуку для: " + finalUrl);
+        AtomicInteger counter = new AtomicInteger(1);
+        String[] emojis = {"1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"};
+        tracks.forEach(track -> {
+            embed.addField(String.format("%n%d. %s - %s", counter.getAndIncrement(), track.getInfo().title, track.getInfo().author),
+                    track.getInfo().uri, false);
+
+            buttons.add(Button.primary(
+                    "play_" + track.getInfo().identifier,
+                    Emoji.fromUnicode(emojis[counter.get() - 2])
+            ));
+        });
+
+        if (buttonEvent != null) {
+            buttonEvent.getHook().sendMessageEmbeds(embed.build()).queue();
+            return;
+        }
+
+        event.getHook().sendMessageEmbeds(embed.build())
+                .setComponents(ActionRow.of(buttons))
+                .queue();
     }
 }
