@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent;
 import net.dv8tion.jda.api.events.guild.voice.GuildVoiceUpdateEvent;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.events.thread.member.ThreadMemberLeaveEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -27,6 +28,7 @@ import net.dv8tion.jda.api.managers.AudioManager;
 import org.example.audio.ServerMusicManager;
 import org.example.audio.spotify.SpotifyService;
 import org.example.audio.spotify.SpotifyTrack;
+import org.example.audio.youtube.YoutubeService;
 import org.example.telegram.TelegramBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -43,14 +45,16 @@ public class SlashCommandListener extends ListenerAdapter {
     private final SlashCommand slashCommand;
     private final AudioPlayerManager playerManager;
     private final SpotifyService spotifyService;
+    private final YoutubeService youtubeService;
     private final Map<Long, ServerMusicManager> musicManagers;
     private final Map<String, ServerMusicManager> pendingPins;
 
-    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService, Map<String, ServerMusicManager> pendingPins) {
+    public SlashCommandListener(SlashCommand slashCommand, SpotifyService spotifyService, YoutubeService youtubeService, Map<String, ServerMusicManager> pendingPins) {
         this.slashCommand = slashCommand;
         this.musicManagers = new ConcurrentHashMap<>();
         this.playerManager = new DefaultAudioPlayerManager();
         this.spotifyService = spotifyService;
+        this.youtubeService = youtubeService;
         this.pendingPins = pendingPins;
 
         dev.lavalink.youtube.YoutubeAudioSourceManager ytSourceManager = new dev.lavalink.youtube.YoutubeAudioSourceManager(
@@ -89,7 +93,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("forecast_detailed", "Get detailed forecast information for a specific city")
                         .addOption(OptionType.STRING, "city", "City name", true),
                 Commands.slash("play", "Play a song from YouTube")
-                        .addOption(OptionType.STRING, "url", "YouTube URL of the song", true),
+                        .addOption(OptionType.STRING, "name_or_url", "Name or URL (YouTube, Spotify) of the song", true),
                 Commands.slash("skip", "Skip a song"),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
@@ -161,7 +165,7 @@ public class SlashCommandListener extends ListenerAdapter {
             }
             case "play" -> {
                 event.deferReply().queue();
-                String url = event.getOption("url", OptionMapping::getAsString);
+                String url = event.getOption("name_or_url", OptionMapping::getAsString);
 
                 GuildVoiceState voiceState = event.getMember().getVoiceState();
 
@@ -179,8 +183,9 @@ public class SlashCommandListener extends ListenerAdapter {
                 musicManager.lastCommandChannel = event.getChannel();
 
                 SpotifyTrack spotifyTrack = null;
+                boolean isSearch = false;
 
-                if (spotifyService.isSpotifyTrackUrl(url)) {
+                if (spotifyService.isValidTrackUrl(url)) {
                     try {
                         spotifyTrack = spotifyService.getSpotifyTrack(url);
                         url = "ytsearch:" + spotifyTrack.getArtist() + " - " + spotifyTrack.getTitle();
@@ -188,97 +193,14 @@ public class SlashCommandListener extends ListenerAdapter {
                         event.getHook().sendMessage("❌ не вдалося прочитати спатіфай трєк: " + e.getMessage()).queue();
                         return;
                     }
+                } else if (!youtubeService.isValidTrackUrl(url)) {
+                    url = "ytsearch:" + url;
+                    isSearch = true;
                 }
 
+                String finalUrl = url;
                 SpotifyTrack finalSpotifyTrack = spotifyTrack;
-                playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandler() {
-                    @Override
-                    public void trackLoaded(AudioTrack track) {
-                        addTrackToQueue(track);
-                    }
-
-                    @Override
-                    public void playlistLoaded(AudioPlaylist playlist) {
-                        AudioTrack track;
-                        if (playlist.getTracks().size() > 1 && finalSpotifyTrack == null) {
-                            playlist.getTracks().forEach(this::addTrackToQueue);
-                            return;
-                        } else {
-                            track = playlist.getTracks().getFirst();
-                        }
-                        addTrackToQueue(track);
-                    }
-
-                    @Override
-                    public void noMatches() {
-                        event.getHook().sendMessage("❌ ніхтс нєма").queue();
-                    }
-
-                    @Override
-                    public void loadFailed(FriendlyException exception) {
-                        event.getHook().sendMessage("❌ помілка: " + exception.getMessage()).queue();
-                    }
-
-                    private void addTrackToQueue(AudioTrack track){
-                        musicManager.scheduler.queue(track);
-
-                        EmbedBuilder embed = new EmbedBuilder();
-
-                        if (finalSpotifyTrack != null) {
-                            embed.setColor(Color.decode("#1ed760"));
-                            embed.setTitle(finalSpotifyTrack.getTitle(), finalSpotifyTrack.getSpotifyUrl());
-                            embed.addField("іспалняєт:", String.format("***%s***", finalSpotifyTrack.getArtist()), false);
-                            embed.setThumbnail(finalSpotifyTrack.getImageUrl());
-                            embed.setFooter("работаєм с Spotify", "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Spotify_logo_without_text.svg/960px-Spotify_logo_without_text.svg.png");
-                        } else {
-                            embed.setColor(Color.decode("#d9252a"));
-                            embed.setTitle(track.getInfo().title, track.getInfo().uri);
-                            embed.addField("канал/автор:", String.format("***%s***", track.getInfo().author), false);
-                            embed.setFooter("работаєм с YouTube", "https://upload.wikimedia.org/wikipedia/commons/6/67/YouTube_Logo_June.png?_=20260623194452");
-
-                            if (track.getInfo().uri.contains("youtube.com")) {
-                                embed.setThumbnail("https://img.youtube.com/vi/" + track.getInfo().identifier + "/mqdefault.jpg");
-                            }
-                        }
-
-                        long duration = track.getInfo().length;
-                        addDurationFieldToEmbed(embed, duration, false);
-
-
-                        if (!musicManager.scheduler.queue.isEmpty()) {
-                            if (musicManager.scheduler.currentTrack != null) {
-                                duration += musicManager.scheduler.currentTrack.getDuration();
-                            }
-                            if (musicManager.scheduler.queue.size() > 1) {
-                                duration += musicManager.scheduler.queue.stream()
-                                        .reduce(0L, (sum, t) -> sum + t.getDuration(), Long::sum) - track.getInfo().length;
-                            }
-                            addDurationFieldToEmbed(embed, duration, true);
-                        }
-
-                        event.getHook().sendMessageEmbeds(embed.build()).queue();
-                    }
-
-                    private void addDurationFieldToEmbed(EmbedBuilder embed, long duration, boolean isQueue) {
-                        long seconds = duration % 60000 / 1000;
-                        long minutes = duration / 60000;
-                        long hours = minutes / 60;
-                        if (hours > 0) {
-                            minutes -= hours * 60;
-                            if (isQueue) {
-                                embed.addField("врємя очєрєді: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
-                            } else {
-                                embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
-                            }
-                        } else {
-                            if (isQueue) {
-                                embed.addField("врємя очєрєді: ", String.format("`%02d:%02d`", minutes, seconds), false);
-                            } else {
-                                embed.addField("врємя: ", String.format("`%02d:%02d`", minutes, seconds), false);
-                            }
-                        }
-                    }
-                });
+                playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandlerImpl(event, null, musicManager, finalUrl, finalSpotifyTrack, isSearch));
             }
             case "skip" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
@@ -298,7 +220,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 event.reply(paused ? ":pause_button: бауза" : ":arrow_forward: паєхалі").queue();
             }
             case "broadcast_tg" -> {
-                event.deferReply().queue();
+                event.deferReply(true).queue();
                 Dotenv dotenv = Dotenv.load();
 
                 GuildVoiceState voiceState = event.getMember().getVoiceState();
@@ -319,6 +241,25 @@ public class SlashCommandListener extends ListenerAdapter {
 
                 event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
             }
+        }
+    }
+
+    @Override
+    public void onButtonInteraction(ButtonInteractionEvent event) {
+        String buttonId = event.getComponentId();
+
+        if (buttonId.startsWith("play_")) {
+            String trackId = buttonId.replace("play_", "");
+
+            event.deferReply().queue();
+            event.getMessage().delete().queue();
+
+            String trackUrl = "https://www.youtube.com/watch?v=" + trackId;
+
+            ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+            musicManager.lastCommandChannel = event.getChannel();
+
+            playerManager.loadItemOrdered(musicManager, trackUrl, new AudioLoadResultHandlerImpl(null, event, musicManager, trackUrl, null, false));
         }
     }
 

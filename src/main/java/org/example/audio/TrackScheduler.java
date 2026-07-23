@@ -60,7 +60,7 @@ public class TrackScheduler extends AudioEventAdapter {
             nextTrack();
         }
 
-        if (queue.isEmpty()) {
+        if (player.getPlayingTrack() == null) {
             startTimer();
         }
     }
