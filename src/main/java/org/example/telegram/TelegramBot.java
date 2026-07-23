@@ -191,7 +191,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             minutes -= hours * 60;
                             embed.addField("врємя: ", String.format("`%d:%02d:%02d`", hours, minutes, seconds), false);
                         } else {
-                            embed.addField("врємя: ", String.format("`%d:%02d`", minutes, seconds), false);
+                            embed.addField("врємя: ", String.format("`%02d:%02d`", minutes, seconds), false);
                         }
 
                         if (!musicManager.scheduler.queue.isEmpty()) {
@@ -199,7 +199,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             if (musicManager.scheduler.currentTrack != null) {
                                 duration += musicManager.scheduler.currentTrack.getDuration();
                             }
-                            if (musicManager.scheduler.queue.size() > 1) {
+                            if (musicManager.scheduler.queue.size() > 0) {
                                 duration += musicManager.scheduler.queue.stream()
                                         .reduce(0L, (sum, t) -> sum + t.getDuration(), Long::sum) - audio.getDuration();
                             }

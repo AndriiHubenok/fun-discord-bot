@@ -251,6 +251,7 @@ public class SlashCommandListener extends ListenerAdapter {
         if (buttonId.startsWith("play_")) {
             String trackId = buttonId.replace("play_", "");
 
+            event.deferReply().queue();
             event.getMessage().delete().queue();
 
             String trackUrl = "https://www.youtube.com/watch?v=" + trackId;
