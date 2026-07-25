@@ -97,6 +97,7 @@ public class SlashCommandListener extends ListenerAdapter {
                 Commands.slash("skip", "Skip a song"),
                 Commands.slash("stop", "Stop the song"),
                 Commands.slash("pause", "Pause/Play the song"),
+                Commands.slash("leave", "Leave the voice channel"),
                 Commands.slash("broadcast_tg", "Broadcast the song from Telegram Bot")
         ).queue();
     }
@@ -202,6 +203,34 @@ public class SlashCommandListener extends ListenerAdapter {
                 SpotifyTrack finalSpotifyTrack = spotifyTrack;
                 playerManager.loadItemOrdered(musicManager, url, new AudioLoadResultHandlerImpl(event, null, musicManager, finalUrl, finalSpotifyTrack, isSearch));
             }
+            case "broadcast_tg" -> {
+                event.deferReply(true).queue();
+                Dotenv dotenv = Dotenv.load();
+
+                GuildVoiceState voiceState = event.getMember().getVoiceState();
+
+                if (voiceState == null || !voiceState.inAudioChannel()) {
+                    event.getHook().sendMessage("чого нє в каналє?").queue();
+                    return;
+                }
+
+                AudioChannel userVoiceChannel = voiceState.getChannel();
+                AudioManager audioManager = event.getGuild().getAudioManager();
+                try {
+                    audioManager.openAudioConnection(userVoiceChannel);
+                } catch (Exception e) {
+                    event.getHook().sendMessage("❌ нє можу підключіться до каналє: " + e.getMessage()).queue();
+                    return;
+                }
+
+
+                ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
+                musicManager.lastCommandChannel = event.getChannel();
+                String pin = String.format("%04d", (int)(Math.random() * 10000));
+                pendingPins.put(pin, musicManager);
+
+                event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
+            }
             case "skip" -> {
                 ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
                 mgr.scheduler.nextTrack();
@@ -219,27 +248,12 @@ public class SlashCommandListener extends ListenerAdapter {
                 mgr.player.setPaused(paused);
                 event.reply(paused ? ":pause_button: бауза" : ":arrow_forward: паєхалі").queue();
             }
-            case "broadcast_tg" -> {
-                event.deferReply(true).queue();
-                Dotenv dotenv = Dotenv.load();
-
-                GuildVoiceState voiceState = event.getMember().getVoiceState();
-
-                if (voiceState == null || !voiceState.inAudioChannel()) {
-                    event.getHook().sendMessage("чого нє в каналє?").queue();
-                    return;
-                }
-
-                AudioChannel userVoiceChannel = voiceState.getChannel();
-                AudioManager audioManager = event.getGuild().getAudioManager();
-                audioManager.openAudioConnection(userVoiceChannel);
-
-                ServerMusicManager musicManager = getOrCreateServerMusicManager(event.getGuild());
-                musicManager.lastCommandChannel = event.getChannel();
-                String pin = String.format("%04d", (int)(Math.random() * 10000));
-                pendingPins.put(pin, musicManager);
-
-                event.getHook().sendMessage("ждьом тваєго сігнала с тг - **" + dotenv.get("TELEGRAM_BOT_NAME") + "**\nввєді в тг: **/pin " + pin + "**").queue();
+            case "leave" -> {
+                ServerMusicManager mgr = getOrCreateServerMusicManager(event.getGuild());
+                mgr.scheduler.queue.clear();
+                mgr.player.stopTrack();
+                event.getGuild().getAudioManager().closeAudioConnection();
+                event.reply(":wave: пашлі ви").queue();
             }
         }
     }

@@ -40,11 +40,20 @@ public class AudioLoadResultHandlerImpl implements AudioLoadResultHandler {
 
     @Override
     public void trackLoaded(AudioTrack track) {
+        if (track == null) {
+            event.getChannel().sendMessage("трєк не може буть відтвореним").queue();
+            return;
+        }
         addTrackToQueue(track);
     }
 
     @Override
     public void playlistLoaded(AudioPlaylist playlist) {
+        if (playlist == null) {
+            event.getChannel().sendMessage("плєйліст не може буть відтвореним").queue();
+            return;
+        }
+
         if (isSearch) {
             responseWithPossibleTracks(playlist);
             return;
